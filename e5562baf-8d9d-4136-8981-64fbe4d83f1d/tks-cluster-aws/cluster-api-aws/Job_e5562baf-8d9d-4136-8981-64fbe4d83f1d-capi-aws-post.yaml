@@ -1,0 +1,71 @@
+# Source: cluster-api-aws/templates/job-post.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: e5562baf-8d9d-4136-8981-64fbe4d83f1d-capi-aws-post
+  namespace: e5562baf-8d9d-4136-8981-64fbe4d83f1d
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+spec:
+  template:
+    metadata:
+      name: e5562baf-8d9d-4136-8981-64fbe4d83f1d-capi-aws
+    spec:
+      serviceAccountName: e5562baf-8d9d-4136-8981-64fbe4d83f1d-capi-aws
+      containers:
+      - name: generate-worker-machines
+        image: "ghcr.io/openinfradev/python_kubectl_argo:v1.1.0"
+        imagePullPolicy: IfNotPresent
+        command:
+        - timeout
+        - 20m
+        - /generate_worker_machines.py
+        - e5562baf-8d9d-4136-8981-64fbe4d83f1d
+        - e5562baf-8d9d-4136-8981-64fbe4d83f1d
+        volumeMounts:
+        - name: vol
+          subPath: mp.raw.yaml
+          mountPath: /mp.raw.yaml
+        - name: vol
+          subPath: md.raw.yaml
+          mountPath: /md.raw.yaml
+        - name: vol
+          subPath: generate_worker_machines.py
+          mountPath: /generate_worker_machines.py
+      - name: wait-and-initialize
+        image: "ghcr.io/openinfradev/python_kubectl_argo:v1.1.0"
+        imagePullPolicy: IfNotPresent
+        command:
+        - timeout
+        - 20m
+        - /wait_and_k8s_init.sh
+        - e5562baf-8d9d-4136-8981-64fbe4d83f1d
+        - taco
+        - e5562baf-8d9d-4136-8981-64fbe4d83f1d
+        - "true"
+        - "true"
+
+        volumeMounts:
+        - name: kubeconfig
+          subPath: value
+          mountPath: /kube.config
+        - name: vol
+          subPath: node_label.py
+          mountPath: /node_label.py
+        - name: vol
+          subPath: wait_and_k8s_init.sh
+          mountPath: /wait_and_k8s_init.sh
+        - name: vol
+          subPath: argo-register.sh
+          mountPath: /argo-register.sh
+
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: e5562baf-8d9d-4136-8981-64fbe4d83f1d-kubeconfig
+      - name: vol
+        configMap:
+          name: e5562baf-8d9d-4136-8981-64fbe4d83f1d-capi-aws
+          defaultMode: 0555
+      restartPolicy: OnFailure
